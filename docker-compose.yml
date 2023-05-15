@@ -10,7 +10,7 @@ services:
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         ports:
-            - '${APP_PORT:-80}:80'
+            - '${APP_PORT:-8000}:80'
             - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
         environment:
             WWWUSER: '${WWWUSER}'
@@ -24,17 +24,14 @@ services:
             - sail
         depends_on:
             - mysql
-            - redis
             - meilisearch
-            - mailpit
-            - selenium
     mysql:
         image: 'mysql/mysql-server:8.0'
         ports:
             - '${FORWARD_DB_PORT:-3306}:3306'
         environment:
             MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
-            MYSQL_ROOT_HOST: '%'
+            MYSQL_ROOT_HOST: "%"
             MYSQL_DATABASE: '${DB_DATABASE}'
             MYSQL_USER: '${DB_USERNAME}'
             MYSQL_PASSWORD: '${DB_PASSWORD}'
@@ -91,14 +88,36 @@ services:
             - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
         networks:
             - sail
-    selenium:
-        image: seleniarm/standalone-chromium
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
-        volumes:
-            - '/dev/shm:/dev/shm'
+    phpmyadmin:
+        image: phpmyadmin:latest
+        ports:
+            - 8002:80
         networks:
             - sail
+        links:
+            - mysql:db
+        environment:
+            UPLOAD_LIMIT: 300M
+        depends_on:
+            - mysql
+    php:
+        image: php:8.1-alpine
+        working_dir: /var/www/html
+        volumes:
+            - .:/var/www/html
+        entrypoint: php
+    composer:
+        image: composer
+        working_dir: /var/www/html
+        volumes:
+            - .:/var/www/html
+        entrypoint: composer
+    npm:
+        image: node
+        working_dir: /var/www/html
+        volumes:
+            - .:/var/www/html
+        entrypoint: npm
 networks:
     sail:
         driver: bridge
@@ -108,4 +127,4 @@ volumes:
     sail-redis:
         driver: local
     sail-meilisearch:
-        driver: local
+        driver: local 
